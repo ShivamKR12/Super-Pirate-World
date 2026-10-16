@@ -1,0 +1,56 @@
+name: Build Cross-Platform Executables
+
+on:
+  push:
+    paths:
+      - '**.py'
+      - '**.spec'
+      - '**.ini'
+      - 'requirements.txt'
+      - 'setup.py'
+      - '.github/workflows/*.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pygame pyinstaller
+
+      - name: Build executable
+        run: |
+          pyinstaller --onefile --windowed game.py
+        # Use --windowed only for GUI apps (like games)
+
+      - name: Rename output for clarity
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            mv dist/game.exe dist/mygame-${{ matrix.os }}.exe
+          elif [[ "${{ runner.os }}" == "macOS" ]]; then
+            mv dist/game dist/mygame-macos.app
+          else
+            mv dist/game dist/mygame-linux
+          fi
+        shell: bash
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ runner.os }}-executable
+          path: dist/   
